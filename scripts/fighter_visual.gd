@@ -104,8 +104,11 @@ func _draw() -> void:
 					front_hand = Vector2(-70 * pulse, -100)
 					back_hand = Vector2(-65 * pulse, -120)
 				3:
-					_angle = -TAU * smoothstep(0.0, 1.0, t)
-					_lift = -65.0 * pulse
+					# Land before the gameplay contact at 0.72 / 1.25 seconds.
+					# Successful contact can then enter the shared hug without snapping upright.
+					var flight := clampf(t / 0.56, 0.0, 1.0)
+					_angle = -TAU * smoothstep(0.0, 1.0, flight)
+					_lift = -65.0 * sin(flight * PI)
 				4:
 					front_elbow = Vector2(45, -115)
 					front_hand = Vector2(75 * pulse + 20, -120)
