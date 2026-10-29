@@ -1,6 +1,6 @@
 class_name FighterVisual
 extends Node2D
-## Procedural puppet. Position is the floor contact point. `stretch` is in pixels.
+## Procedural puppet. Position is the feet anchor, raised by physics when jumping.
 ## The match owns timing; visuals never change gameplay state or node transforms.
 
 var palette_index: int = 0
@@ -9,6 +9,12 @@ var pose: String = "idle"
 var phase: float = 0.0
 var clock: float = 0.0
 var stretch: float = 0.0
+var airborne: bool = false
+var jump_progress: float = 0.0
+var flight_progress: float = 0.0
+var vertical_speed: float = 0.0
+var landing: float = 0.0
+var ground_offset: float = 0.0
 
 const INK := Color("20263b")
 const SKINS := [Color("d7956f"), Color("b77454"), Color("efbc88"), Color("965e51"), Color("daaa8b"), Color("744d48"), Color("d99677"), Color("b57e66")]
@@ -20,10 +26,14 @@ var _bob: float = 0.0
 var _lean: float = 0.0
 var _angle: float = 0.0
 var _lift: float = 0.0
+var _squash: float = 0.0
 
 func _p(v: Vector2) -> Vector2:
 	v.x += _lean * (-v.y / 150.0)
 	v = (v - Vector2(0, -85)).rotated(_angle) + Vector2(0, -85)
+	# Squash toward the feet without moving their floor anchor.
+	v.x *= 1.0 + _squash * 0.055
+	v.y *= 1.0 - _squash * 0.10
 	return Vector2(v.x * _flip, v.y + _bob + _lift)
 
 func _line(a: Vector2, b: Vector2, color: Color, width: float) -> void:
@@ -65,6 +75,7 @@ func _draw() -> void:
 	_lean = 0.0
 	_angle = 0.0
 	_lift = 0.0
+	_squash = clampf(landing, 0.0, 1.0) if not airborne else 0.0
 	var front_elbow := Vector2(32, -103)
 	var front_hand := Vector2(40, -133)
 	var back_elbow := Vector2(-24, -96)
@@ -77,7 +88,7 @@ func _draw() -> void:
 	var head_y := -149.0
 	if i == 5:
 		head_y = -142.0
-	if pose == "walk":
+	if pose == "walk" and not airborne:
 		var stride := sin(clock * 13.0)
 		_bob = absf(cos(clock * 13.0)) * -4.0
 		left_foot.x += stride * 15.0
@@ -104,11 +115,9 @@ func _draw() -> void:
 					front_hand = Vector2(-70 * pulse, -100)
 					back_hand = Vector2(-65 * pulse, -120)
 				3:
-					# Land before the gameplay contact at 0.72 / 1.25 seconds.
-					# Successful contact can then enter the shared hug without snapping upright.
-					var flight := clampf(t / 0.56, 0.0, 1.0)
-					_angle = -TAU * smoothstep(0.0, 1.0, flight)
-					_lift = -65.0 * sin(flight * PI)
+					# This move launches actual jump physics. The airborne
+					# choreography below owns its only rotation and height.
+					pass
 				4:
 					front_elbow = Vector2(45, -115)
 					front_hand = Vector2(75 * pulse + 20, -120)
@@ -163,12 +172,99 @@ func _draw() -> void:
 	front_hand = Vector2(40, -133).lerp(front_hand, envelope)
 	back_elbow = Vector2(-24, -96).lerp(back_elbow, envelope)
 	back_hand = Vector2(10, -119).lerp(back_hand, envelope)
+	# Physics raises the whole puppet; only the leg articulation is cosmetic.
+	# Height-based blending extends feet naturally for takeoff and touchdown.
+	var tuck := smoothstep(0.0, 0.65, clampf(jump_progress, 0.0, 1.0)) if airborne else 0.0
+	if airborne:
+		var rising := clampf(-vertical_speed / 700.0, -1.0, 1.0)
+		var flight := clampf(flight_progress, 0.0, 1.0)
+		var flourish := sin(flight * PI)
+		var relaxed_arms := pose == "idle" or pose == "walk"
+		left_knee = left_knee.lerp(Vector2(-32, -52), tuck)
+		right_knee = right_knee.lerp(Vector2(31, -58), tuck)
+		left_foot = left_foot.lerp(Vector2(-22, -30 - rising * 3), tuck)
+		right_foot = right_foot.lerp(Vector2(34, -40 + rising * 3), tuck)
+		_bob = lerpf(_bob, 0.0, tuck)
+		_lean += rising * 4.0 * tuck
+		if relaxed_arms:
+			front_elbow = front_elbow.lerp(Vector2(33, -110), tuck)
+			front_hand = front_hand.lerp(Vector2(43, -144), tuck)
+			back_elbow = back_elbow.lerp(Vector2(-26, -104), tuck)
+			back_hand = back_hand.lerp(Vector2(2, -127), tuck)
+		# Every fighter has a recognizable aerial silhouette. All poses
+		# converge to their grounded stance at takeoff and touchdown.
+		match i:
+			0: # Champ: compact, practiced, and symmetrical.
+				left_knee = left_knee.lerp(Vector2(-24, -57), tuck)
+				right_knee = right_knee.lerp(Vector2(26, -57), tuck)
+				left_foot = left_foot.lerp(Vector2(-22, -38), tuck)
+				right_foot = right_foot.lerp(Vector2(25, -38), tuck)
+			1: # Long Arms: knees too high and wrists comically dangling.
+				_lean -= 8.0 * flourish
+				left_knee = left_knee.lerp(Vector2(-33, -76), tuck)
+				right_knee = right_knee.lerp(Vector2(37, -68), tuck)
+				left_foot = left_foot.lerp(Vector2(-12, -45), tuck)
+				right_foot = right_foot.lerp(Vector2(21, -34), tuck)
+				if relaxed_arms:
+					front_elbow = front_elbow.lerp(Vector2(45, -104), flourish)
+					front_hand = front_hand.lerp(Vector2(55, -76), flourish)
+					back_elbow = back_elbow.lerp(Vector2(-41, -107), flourish)
+					back_hand = back_hand.lerp(Vector2(-51, -83), flourish)
+			2: # Baxter: reclines in the air with his feet out ahead.
+				_lean -= 24.0 * flourish
+				_angle += 0.10 * flourish
+				left_knee = left_knee.lerp(Vector2(0, -50), tuck)
+				right_knee = right_knee.lerp(Vector2(33, -54), tuck)
+				left_foot = left_foot.lerp(Vector2(16, -24), tuck)
+				right_foot = right_foot.lerp(Vector2(53, -34), tuck)
+			3: # Acrobat: one full somersault, finished before touchdown.
+				_angle = -TAU * smoothstep(0.0, 0.94, flight)
+				left_knee = left_knee.lerp(Vector2(-27, -83), tuck)
+				right_knee = right_knee.lerp(Vector2(29, -83), tuck)
+				left_foot = left_foot.lerp(Vector2(-13, -60), tuck)
+				right_foot = right_foot.lerp(Vector2(15, -60), tuck)
+			4: # Big Softy: a committed belly-first lurch, legs trailing.
+				_lean += 22.0 * flourish
+				_angle += 0.10 * flourish
+				left_knee = left_knee.lerp(Vector2(-35, -37), tuck)
+				right_knee = right_knee.lerp(Vector2(20, -43), tuck)
+				left_foot = left_foot.lerp(Vector2(-47, -16), tuck)
+				right_foot = right_foot.lerp(Vector2(20, -20), tuck)
+			5: # Speedster: one forward knee and a trailing sprinter's leg.
+				_lean += 19.0 * flourish
+				left_knee = left_knee.lerp(Vector2(-34, -40), tuck)
+				right_knee = right_knee.lerp(Vector2(39, -77), tuck)
+				left_foot = left_foot.lerp(Vector2(-43, -22), tuck)
+				right_foot = right_foot.lerp(Vector2(33, -54), tuck)
+			6: # Showboat: an unnecessarily theatrical star jump.
+				left_knee = left_knee.lerp(Vector2(-40, -49), tuck)
+				right_knee = right_knee.lerp(Vector2(43, -48), tuck)
+				left_foot = left_foot.lerp(Vector2(-63, -30), tuck)
+				right_foot = right_foot.lerp(Vector2(66, -29), tuck)
+				if relaxed_arms:
+					front_elbow = front_elbow.lerp(Vector2(45, -138), flourish)
+					front_hand = front_hand.lerp(Vector2(67, -169), flourish)
+					back_elbow = back_elbow.lerp(Vector2(-43, -139), flourish)
+					back_hand = back_hand.lerp(Vector2(-66, -169), flourish)
+			7: # Boomerang: a twisting, scissoring hop that unwinds on landing.
+				var twist := sin(flight * TAU) * flourish
+				_flip *= 1.0 - 0.30 * flourish
+				_lean += 16.0 * twist
+				_angle += 0.16 * twist
+				left_knee.x += 14.0 * twist
+				right_knee.x -= 14.0 * twist
+				left_foot.x += 20.0 * twist
+				right_foot.x -= 20.0 * twist
+	_bob *= 1.0 - _squash
 	# A stable floor shadow grounds the puppet independently of animation.
+	# Shadow points deliberately bypass _p and compensate for the raised node.
 	var shadow := PackedVector2Array()
+	var shadow_height := clampf((maxf(ground_offset, 0.0) + maxf(-_lift, 0.0)) / 250.0, 0.0, 1.0)
+	var shadow_scale := lerpf(1.0, 0.56, shadow_height) * (1.0 + _squash * 0.12)
 	for n in range(32):
 		var a := TAU * float(n) / 32.0
-		shadow.append(Vector2(cos(a) * (47.0 if i == 4 else 39.0), sin(a) * 7.0 + 2))
-	draw_colored_polygon(shadow, Color(0.09, 0.13, 0.22, 0.22))
+		shadow.append(Vector2(cos(a) * (47.0 if i == 4 else 39.0) * shadow_scale, sin(a) * 7.0 * shadow_scale + 2 + ground_offset))
+	draw_colored_polygon(shadow, Color(0.09, 0.13, 0.22, lerpf(0.22, 0.10, shadow_height)))
 	# Back arm, legs, and shoes.
 	_limb(Vector2(-width + 3, -113), back_elbow, back_hand, suit.darkened(0.12), 14)
 	_oval(back_hand, Vector2(9, 10), INK)

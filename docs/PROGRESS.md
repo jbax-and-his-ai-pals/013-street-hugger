@@ -1,8 +1,8 @@
-# Milestone 1 checkpoint
+# Prototype checkpoint: jumping and aerial hugs
 
 Project name: `013-street-hugger`. No project license added. All character and stage art is drawn procedurally in Godot; no image-generation requests used.
 
-## Ready now
+## Existing playable baseline
 
 - Eight selectable original prototype appearances and signature approaches.
 - Hug, timed deflect, feint, recovery, movement, and a signature cooldown.
@@ -13,23 +13,39 @@ Project name: `013-street-hugger`. No project license added. All character and s
 - A procedural neighborhood stage with animated clouds, bunting, and spectators.
 - One-click local launcher and gameplay regression checks.
 
-## Validation
+## Jump milestone scope
 
-Godot 4.7.2 console script checks and gameplay suite: 100/100 passing. Pairing checks cover scoring compatibility for all 64 ordered character combinations, not artistic quality or balanced matchups. Eight seeded AI matches complete and each CPU character can score. Rendered menu, arena, attempt, contact, pause, and result captures were checked. Native keyboard signature input, practice entry, and pause were exercised in the running game.
+- P1 jumps with W or Space; P2 jumps with Up in local play. Practice continues to disable all P2 controls.
+- Jump launches from grounded idle/walk. A/D or Left/Right steer in the air. No double jump.
+- Character-specific jumps ranging from 135–215 pixels and 0.70–1.00 seconds, with distinct launch momentum, air control, poses, a 120-millisecond pre-landing jump buffer, and a short landing cue.
+- Crossing above a partner when height separation exceeds 85 pixels, while grounded walking retains personal space.
+- Hug, Deflect, and Feint available in the air. Signatures begin grounded; Acrobat's signature launches its own physical vault.
+- Height-aware hug contact: separation must be at most 85 pixels. Matching-height aerial and low rising/falling contact can work; apex-over-ground attempts miss.
+- A successful aerial embrace aligns both fighters to a shared height and settles to the floor smoothly.
 
-## First user gate — now, about five minutes
+## Validation status
 
-The first feedback pass found practice mode still accepting P2 input and ordinary walking pushing the partner. Both are fixed. Input now consistently uses physical key positions, releases clear held movement, and losing window focus clears held keys. Above-character P1/P2/CPU/PARTNER labels identify control ownership even after side changes. The expanded regression suite passes 126/126 checks.
+The first feedback pass found Practice still accepting P2 input and ordinary walking pushing the partner. Both were corrected in the baseline. Input consistently uses physical key positions, releases clear held movement, and losing window focus clears held keys. Above-character P1/P2/CPU/PARTNER labels identify control ownership even after side changes.
 
-1. Practice with Champ: walk, stop, and hug at several distances. Identify any delay from idle or disagreement between visible arms and scoring range.
-2. Practice with Long Arms and Acrobat: try J near and far. Identify any contact you cannot explain visually. The Acrobat currently completes an upright shared embrace after an inverted approach.
-3. Play one computer match, use pause, and rematch. Report anything that interrupts or confuses the loop.
+The **pre-jump baseline** passed 126/126 regression checks, including scoring compatibility for all 64 ordered character combinations, eight seeded AI matches, and keyboard routing in Practice/local modes. Rendered menu, arena, attempt, contact, pause, and result captures were inspected. Native keyboard signature input, Practice entry, and pause were exercised in the running game.
 
-Send the most confusing moment and what you expected instead. A character name, key, and approximate distance usually suffice.
+The jump build passes **167/167 regression checks**. Added checks cover jump input ownership, no double jump, pre-landing buffering and expiry, air steering and crossing, height-aware misses, descending and air-to-air hugs, aerial deflection/mutual contact, smooth joint descent, pause/reset, all eight authored apexes/landings, and Acrobat's real physical vault. All eight jump personalities plus the updated menu and aerial embrace were inspected in rendered captures. Ownership markers now sit below the ground shadow to avoid overlap with the HUD during high jumps. These checks establish basic functionality, not artistic quality or balanced matchups.
 
-## Second user gate — after the first feel/readability adjustments
+## Next user gate — jump build, about five minutes
 
-Follow the full sequence in PLAYTEST.md, including local deflect/counterhug experiments and all eight signatures. This checks timing, readable strengths/weaknesses, and whether bluffing gives you useful decisions.
+Use the focused jump sequence in [PLAYTEST.md](PLAYTEST.md#next-gate-jumping--about-5-minutes):
+
+1. Practice neutral/moving jumps — 30 seconds.
+2. Jump over the stationary partner and inspect facing — 30 seconds.
+3. Try F near the apex versus while descending; inspect aerial embrace/landing — 1 minute.
+4. Local matching-height aerial hugs and deflects — 1 minute.
+5. One computer match with jumps — 1 minute.
+
+Allow the remaining time for mode changes and a short report. Send the most confusing moment, expected versus actual behavior, character/matchup, key, and rising/apex/falling phase. We need control response, height/range readability, and landing/contact feedback first.
+
+## Following interaction gate
+
+The longer PLAYTEST.md sequence covers local bluffing/counterhugs, all eight signatures, and match flow after jump/readability fixes.
 
 ## Art gate — after the interaction rules stabilize
 
@@ -37,4 +53,4 @@ Choose the visual direction and polish one character/contact sequence as the pro
 
 ## Known prototype limits
 
-All characters currently use shared upright embrace contact. Inverted, ranged, and reverse approaches have distinct motion but need bespoke finishing choreography. Whole-puppet drawing cannot perfectly interleave both characters' arms; production work should split front/back arm layers. Movement and poses run on fixed game ticks; high-refresh interpolation and deeper input buffering remain candidates after player feedback. No sound, gamepads, online play, difficulty selector, or final balance yet.
+All characters currently use shared upright embrace contact. Inverted, ranged, and reverse approaches have distinct motion but need bespoke finishing choreography. Whole-puppet drawing cannot perfectly interleave both characters' arms; production work should split front/back arm layers. High-refresh presentation and broader action buffering beyond the short jump buffer remain further feel improvements. No sound, gamepads, online play, difficulty selector, or final balance yet.

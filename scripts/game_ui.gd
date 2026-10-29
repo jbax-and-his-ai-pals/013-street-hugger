@@ -168,10 +168,10 @@ func _build_menu() -> void:
 	_ai.add_theme_color_override("font_disabled_color", MUTED)
 	_ai.add_theme_font_size_override("font_size", 18)
 	layout.add_child(_ai)
-	var rules := _label("HUG catches an opening. DEFLECT stops a hug. FEINT baits a deflect.\nMissed attempts leave you open. Your signature changes the approach.", 17, MUTED)
+	var rules := _label("HUG catches an opening. DEFLECT stops a hug. FEINT baits a deflect.\nJump over a reach. Hug at matching height.\nHug, deflect and feint work in the air. Signatures start on the ground.", 17, MUTED)
 	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(rules)
-	var controls := _label("P1   A / D move    F hug    G deflect    H feint    J signature\nP2   ← / → move    K hug    L deflect    ; feint    ' signature", 17)
+	var controls := _label("P1   A/D move    W/SPACE jump    F hug    G deflect    H feint    J signature\nP2   ←/→ move    ↑ jump    K hug    L deflect    ; feint    ' signature", 17)
 	layout.add_child(controls)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
@@ -283,7 +283,7 @@ func _build_hud() -> void:
 	var controls := VBoxContainer.new()
 	strip.add_child(controls)
 	controls.add_theme_constant_override("separation", 2)
-	var p1_controls := _label("P1   A/D MOVE     F HUG     G DEFLECT     H FEINT     J SIGNATURE", 15, CREAM)
+	var p1_controls := _label("P1   A/D MOVE    W/SPACE JUMP    F HUG    G DEFLECT    H FEINT    J SIGNATURE", 15, CREAM)
 	p1_controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	controls.add_child(p1_controls)
 	_p2_controls = _label("", 15, Color("9cd8cb"))
@@ -361,7 +361,7 @@ func show_match(p1_name: String, p2_name: String, versus_ai: bool) -> void:
 	_pause.hide()
 	_p1_name.text = "P1 / " + p1_name
 	_p2_name.text = ("CPU / " if versus_ai else "P2 / ") + p2_name
-	_p2_controls.text = "CPU OPPONENT     •     ESC PAUSE" if versus_ai else "P2   ←/→ MOVE     K HUG     L DEFLECT     ; FEINT     ' SIGNATURE     •     ESC PAUSE"
+	_p2_controls.text = "CPU OPPONENT     •     ESC PAUSE" if versus_ai else "P2   ←/→ MOVE    ↑ JUMP    K HUG    L DEFLECT    ; FEINT    ' SIGNATURE    •    ESC PAUSE"
 	update_hud(0, 0, 60.0, "")
 	update_signatures(0.0, 0.0)
 
