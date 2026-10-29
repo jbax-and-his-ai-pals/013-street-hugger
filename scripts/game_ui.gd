@@ -359,8 +359,8 @@ func show_match(p1_name: String, p2_name: String, versus_ai: bool) -> void:
 	_hud.show()
 	_result.hide()
 	_pause.hide()
-	_p1_name.text = p1_name
-	_p2_name.text = p2_name + ("  / CPU" if versus_ai else "")
+	_p1_name.text = "P1 / " + p1_name
+	_p2_name.text = ("CPU / " if versus_ai else "P2 / ") + p2_name
 	_p2_controls.text = "CPU OPPONENT     •     ESC PAUSE" if versus_ai else "P2   ←/→ MOVE     K HUG     L DEFLECT     ; FEINT     ' SIGNATURE     •     ESC PAUSE"
 	update_hud(0, 0, 60.0, "")
 	update_signatures(0.0, 0.0)
@@ -380,9 +380,10 @@ func set_practice(value: bool) -> void:
 	_practice = value
 	_round_label.text = "PRACTICE" if value else "FIRST TO FIVE"
 	if value:
+		_p2_name.text = _p2_name.text.replace("P2 / ", "PARTNER / ")
 		_timer.text = "∞"
 		_timer.add_theme_color_override("font_color", INK)
-		_p2_controls.text = "STATIONARY PARTNER     •     ESC PAUSE / CHOOSE CHARACTERS"
+		_p2_controls.text = "PARTNER CONTROLS DISABLED     •     ESC PAUSE / CHOOSE CHARACTERS"
 
 
 func show_result(message: String) -> void:

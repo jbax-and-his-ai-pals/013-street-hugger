@@ -31,6 +31,8 @@ Choose two characters and either a computer opponent or local two-player play. P
 
 A successful embrace scores one point. A simultaneous mutual embrace scores neither player. Deflection has a short active window; early deflection and missed hugs leave openings. A feint has no scoring contact: use it to provoke a premature deflect. Signature hugs have a cooldown and different reach, timing, and movement.
 
+Practice accepts only Player 1 controls. Player 2 keys are disabled and ordinary walking cannot push the stationary partner. In local matches both keyboard layouts are enabled. Letter bindings refer to physical QWERTY key positions; movement and actions use the same physical-key handling.
+
 ## What to test now
 
 Follow [the specific playtest sequence](docs/PLAYTEST.md), approximately 15 minutes. Please prioritize input response, range clarity, deflect timing, and animation contact over cosmetic polish or fine balance.
@@ -64,4 +66,4 @@ From the project directory, run the gameplay regression script with the console 
 
 These checks cover gameplay rules; they cannot establish whether the animation or input response feels good to a player.
 
-The initial suite passes **100 checks**, including all 64 ordered character contact pairings and eight seeded computer matches. Rendered menu, arena, attempt, embrace, pause, and result frames have also been inspected. These checks establish basic functionality, not competitive balance.
+The suite passes **126 checks**, including all 64 ordered character contact pairings, eight seeded computer matches, and per-player keyboard routing in practice and local modes. Rendered menu, arena, attempt, embrace, pause, and result frames have also been inspected. These checks establish basic functionality, not competitive balance.

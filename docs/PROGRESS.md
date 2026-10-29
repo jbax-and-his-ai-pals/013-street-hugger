@@ -19,6 +19,8 @@ Godot 4.7.2 console script checks and gameplay suite: 100/100 passing. Pairing c
 
 ## First user gate — now, about five minutes
 
+The first feedback pass found practice mode still accepting P2 input and ordinary walking pushing the partner. Both are fixed. Input now consistently uses physical key positions, releases clear held movement, and losing window focus clears held keys. Above-character P1/P2/CPU/PARTNER labels identify control ownership even after side changes. The expanded regression suite passes 126/126 checks.
+
 1. Practice with Champ: walk, stop, and hug at several distances. Identify any delay from idle or disagreement between visible arms and scoring range.
 2. Practice with Long Arms and Acrobat: try J near and far. Identify any contact you cannot explain visually. The Acrobat currently completes an upright shared embrace after an inverted approach.
 3. Play one computer match, use pause, and rematch. Report anything that interrupts or confuses the loop.

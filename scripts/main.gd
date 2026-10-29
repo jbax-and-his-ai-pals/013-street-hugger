@@ -6,6 +6,9 @@ const Interface = preload("res://scripts/game_ui.gd")
 const NAMES = ["Champ", "Long Arms", "Backwards Baxter", "Acrobat", "Big Softy", "Speedster", "Showboat", "Boomerang"]
 const SPECIALS = ["POWER STEP", "LONG DISTANCE", "REVERSE HUG", "HEAD OVER HEELS", "BEAR NECESSITIES", "QUICK SQUEEZE", "GRAND ENTRANCE", "RETURN TO SENDER"]
 const FLOOR_Y = 555.0
+const ACTION_KEYS = [[KEY_F, KEY_G, KEY_H, KEY_J], [KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE]]
+const MOVE_KEYS = [[KEY_A, KEY_D], [KEY_LEFT, KEY_RIGHT]]
+var held_keys = {}
 var fighters = []
 var ui
 var running = false
@@ -26,7 +29,9 @@ var rng = RandomNumberGenerator.new()
 
 func _ready():
 	rng.randomize()
-	add_child(Stage.new())
+	var stage = Stage.new()
+	stage.show_behind_parent = true
+	add_child(stage)
 	for i in range(2):
 		var visual = Visual.new()
 		add_child(visual)
@@ -45,6 +50,7 @@ func make_fighter(index, visual):
 	return {"visual": visual, "character": index, "x": 420.0 + index * 440.0, "facing": 1.0 if index == 0 else -1.0, "action": "idle", "time": 0.0, "duration": 1.0, "resolved": false, "score": 0, "cooldown": 0.0, "move": 0.0, "origin": 0.0, "action_facing": 1.0, "embrace_from": 0.0, "embrace_to": 0.0}
 
 func start_match(p1, p2, use_ai):
+	held_keys.clear()
 	last_picks = [p1, p2]
 	versus_ai = use_ai
 	practice = false
@@ -64,6 +70,7 @@ func start_match(p1, p2, use_ai):
 	update_visuals()
 
 func back_to_menu():
+	held_keys.clear()
 	running = false
 	paused = false
 	ui.set_paused(false)
@@ -87,21 +94,38 @@ func reset_positions():
 	ai_timer = 0.4
 	ai_direction = 0.0
 
+func human_controls(index):
+	return index == 0 or (not practice and not versus_ai)
+
+func _notification(what):
+	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		held_keys.clear()
+
 func _input(event):
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ESCAPE and running:
+	if event is InputEventKey:
+		# Use the physical position consistently for both actions and movement.
+		# Fall back only for synthetic events that have no physical keycode.
+		var code = event.physical_keycode if event.physical_keycode != 0 else event.keycode
+		if event.pressed:
+			held_keys[code] = true
+		else:
+			held_keys.erase(code)
+		if not event.pressed or event.echo:
+			return
+		if code == KEY_ESCAPE and running:
+			held_keys.clear()
 			paused = not paused
 			ui.set_paused(paused)
 			return
 		if not running or paused or reset_timer > 0.0:
 			return
-		var keys = [[KEY_F, KEY_G, KEY_H, KEY_J], [KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE]]
 		for i in range(2):
-			if i == 1 and versus_ai:
+			if not human_controls(i):
 				continue
 			for k in range(4):
-				if event.physical_keycode == keys[i][k] or event.keycode == keys[i][k]:
+				if code == ACTION_KEYS[i][k]:
 					begin_action(i, ["hug", "deflect", "feint", "special"][k])
+					return
 
 func begin_action(index, action):
 	var f = fighters[index]
@@ -164,12 +188,10 @@ func _physics_process(delta):
 		f.cooldown = maxf(0.0, f.cooldown - delta)
 		if f.action in ["idle", "walk"]:
 			var direction = 0.0
-			if i == 0:
-				direction = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
-			elif versus_ai:
+			if human_controls(i):
+				direction = float(held_keys.has(MOVE_KEYS[i][1])) - float(held_keys.has(MOVE_KEYS[i][0]))
+			elif versus_ai and not practice:
 				direction = ai_direction
-			else:
-				direction = float(Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_LEFT))
 			f.move = direction
 			f.x = clampf(f.x + direction * 245.0 * delta, 90.0, 1190.0)
 			f.facing = 1.0 if other.x >= f.x else -1.0
@@ -189,10 +211,13 @@ func _physics_process(delta):
 	# Walking cannot pass through a partner. Committed signatures may cross sides.
 	var separation = fighters[1].x - fighters[0].x
 	if absf(separation) < 68.0 and fighters[0].action in ["idle", "walk"] and fighters[1].action in ["idle", "walk"]:
-		var middle = clampf((fighters[0].x + fighters[1].x) * 0.5, 124.0, 1156.0)
 		var order = 1.0 if separation >= 0.0 else -1.0
-		fighters[0].x = middle - order * 34.0
-		fighters[1].x = middle + order * 34.0
+		if practice:
+			fighters[0].x = fighters[1].x - order * 68.0
+		else:
+			var middle = clampf((fighters[0].x + fighters[1].x) * 0.5, 124.0, 1156.0)
+			fighters[0].x = middle - order * 34.0
+			fighters[1].x = middle + order * 34.0
 	# Both contact candidates are collected before resolution to keep simultaneous hugs fair.
 	var attempts = []
 	for i in range(2):
@@ -319,6 +344,13 @@ func _process(delta):
 	queue_redraw()
 
 func _draw():
+	if running:
+		for i in range(2):
+			var label = "P1" if i == 0 else ("PARTNER" if practice else ("CPU" if versus_ai else "P2"))
+			var label_width = ThemeDB.fallback_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+			var point = Vector2(fighters[i].x, FLOOR_Y - 222.0)
+			draw_style_box(marker_style(), Rect2(point + Vector2(-label_width / 2.0 - 10.0, -19.0), Vector2(label_width + 20.0, 28.0)))
+			draw_string(ThemeDB.fallback_font, point + Vector2(-label_width / 2.0, 0.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("172d3b"))
 	for effect in effects:
 		var t = effect.time / 0.65
 		var color = effect.color
@@ -328,3 +360,9 @@ func _draw():
 			var center = Vector2(effect.x, FLOOR_Y - 105.0)
 			var direction = Vector2(cos(angle), sin(angle))
 			draw_line(center + direction * (30.0 + t * 70.0), center + direction * (45.0 + t * 90.0), color, 5.0, true)
+
+func marker_style():
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color("fff4dc")
+	style.set_corner_radius_all(8)
+	return style

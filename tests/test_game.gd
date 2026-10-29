@@ -31,6 +31,13 @@ func step(seconds):
 		game._physics_process(dt)
 		remaining -= dt
 
+func key_event(physical, pressed = true, logical = 0):
+	var event = InputEventKey.new()
+	event.physical_keycode = physical
+	event.keycode = physical if logical == 0 else logical
+	event.pressed = pressed
+	game._input(event)
+
 func run_tests():
 	game = load("res://main.tscn").instantiate()
 	root.add_child(game)
@@ -130,6 +137,61 @@ func run_tests():
 		game.rng.seed = 100 + cpu
 		step(61.5)
 		check(not game.running and game.fighters[1].score > 0, "CPU %s completes a match and can score" % game.NAMES[cpu])
+	var actions = ["hug", "deflect", "feint", "special"]
+	var p1_keys = [KEY_F, KEY_G, KEY_H, KEY_J]
+	var p2_keys = [KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE]
+	for action_index in range(4):
+		game.start_practice(0, 1)
+		key_event(p1_keys[action_index])
+		check(game.fighters[0].action == actions[action_index] and game.fighters[1].action == "idle", "Practice P1 key controls only P1: " + actions[action_index])
+		game.start_practice(0, 1)
+		key_event(p2_keys[action_index])
+		check(game.fighters[0].action == "idle" and game.fighters[1].action == "idle", "Practice disables partner key: " + actions[action_index])
+		fresh()
+		key_event(p1_keys[action_index])
+		check(game.fighters[0].action == actions[action_index] and game.fighters[1].action == "idle", "Local P1 action remains isolated: " + actions[action_index])
+		fresh()
+		key_event(p2_keys[action_index])
+		check(game.fighters[1].action == actions[action_index] and game.fighters[0].action == "idle", "Local P2 action remains isolated: " + actions[action_index])
+	game.start_practice(0, 1)
+	var partner_x = game.fighters[1].x
+	key_event(KEY_LEFT)
+	step(0.2)
+	key_event(KEY_LEFT, false)
+	key_event(KEY_RIGHT)
+	step(0.2)
+	check(game.fighters[1].x == partner_x and game.fighters[0].x == 420.0, "Practice arrow keys cannot move either character")
+	key_event(KEY_RIGHT, false)
+	key_event(KEY_D)
+	step(0.2)
+	check(game.fighters[0].x > 420.0 and game.fighters[1].x == partner_x, "Practice D moves P1 only")
+	key_event(KEY_D, false)
+	var stopped_x = game.fighters[0].x
+	step(0.1)
+	check(game.fighters[0].x == stopped_x, "Releasing movement stops P1")
+	key_event(KEY_A)
+	step(0.1)
+	check(game.fighters[0].x < stopped_x, "Practice A moves P1 left")
+	key_event(KEY_A, false)
+	game.fighters[0].x = partner_x - 70.0
+	key_event(KEY_D)
+	step(0.3)
+	check(game.fighters[1].x == partner_x and is_equal_approx(game.fighters[0].x, partner_x - 68.0), "Walking into the practice partner cannot push them")
+	game._notification(Node.NOTIFICATION_WM_WINDOW_FOCUS_OUT)
+	check(game.held_keys.is_empty(), "Losing focus clears movement keys to prevent stuck walking")
+	fresh()
+	key_event(KEY_F, true, KEY_K)
+	check(game.fighters[0].action == "hug" and game.fighters[1].action == "idle", "A translated key cannot trigger both players")
+	game.start_practice(0, 1)
+	key_event(KEY_K, true, KEY_F)
+	check(game.fighters[0].action == "idle" and game.fighters[1].action == "idle", "Logical P1 alias cannot bypass disabled physical partner keys")
+	fresh()
+	key_event(KEY_RIGHT)
+	step(0.1)
+	check(game.fighters[1].x > 600.0 and game.fighters[0].x == 500.0, "Local arrow movement still controls P2 only")
+	game.start_match(0, 1, true)
+	key_event(KEY_K)
+	check(game.fighters[1].action == "idle", "CPU opponent ignores human P2 action keys")
 	game.queue_free()
 	await process_frame
 	print("\nRESULT: %d/%d passed" % [checks - failures, checks])

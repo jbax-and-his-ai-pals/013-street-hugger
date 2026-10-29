@@ -13,6 +13,7 @@ Select **Champ** against **Champ** in Practice. Practice uses a stationary partn
 - Walk left and right, tap to make small adjustments, and release the keys. Does motion begin and end when expected?
 - Approach the partner and walk away. Ordinary walking should stop at personal space rather than pass through them. Does facing remain sensible? Later, check side changes during a signature that travels past the partner.
 - Move to both arena edges. Does either character disappear, jitter, or get stuck?
+- In Practice, arrow keys and K/L/semicolon/apostrophe should do nothing. A/D and F/G/H/J control only the fighter marked P1. The partner should not be pushed by ordinary walking (they still participate in a successful embrace).
 - Tap Hug, Deflect, and Feint separately while idle. Does each begin immediately? Actions intentionally commit for a short time; report unexpected delay while idle separately from being unable to interrupt a move.
 - Press Esc, try movement while paused, then resume. Movement and scoring should stay paused.
 
