@@ -14,14 +14,14 @@ const ORANGE := Color("ed7951")
 const TEAL := Color("217f7b")
 const NAMES := ["Champ", "Long Arms", "Backwards Baxter", "Acrobat", "Big Softy", "Speedster", "Showboat", "Boomerang"]
 const DESCRIPTIONS := [
-	"A dependable advancing embrace. Learn the spacing, then own it.",
-	"A long-distance squeeze. Great reach demands careful commitment.",
-	"Turn away and welcome a pursuer with a backwards embrace.",
-	"An upside-down approach with an unusual contact rhythm.",
-	"A broad, deliberate bear hug. Patience is part of the technique.",
-	"Close the gap in a hurry. Aim that little squeeze carefully.",
-	"A theatrical flourish. Press H early to cancel it into a feint.",
-	"A passing approach and a return embrace. Watch the turn."
+	"Steps forward before hugging.",
+	"Long reach. Stays in place during the attempt.",
+	"Turns away and moves backward toward the opponent.",
+	"Vaults forward, then hugs on landing.",
+	"Slow startup with a wider reach.",
+	"Fast forward slide with short reach.",
+	"Press Feint during the early flourish to cancel.",
+	"Moves forward, then hugs after returning."
 ]
 
 var _built := false
@@ -133,11 +133,9 @@ func _build_menu() -> void:
 	var layout := VBoxContainer.new()
 	margin.add_child(layout)
 	layout.add_theme_constant_override("separation", 8)
-	var eyebrow := _label("NEIGHBORHOOD INVITATIONAL  /  PLAYABLE PROTOTYPE", 15, TEAL)
-	layout.add_child(eyebrow)
 	var title := _label("STREET HUGGER", 48)
 	layout.add_child(title)
-	var subtitle := _label("Serious stances. Sincere embraces. First to five hugs wins.", 20, MUTED)
+	var subtitle := _label("First to five hugs wins.", 20, MUTED)
 	layout.add_child(subtitle)
 	var divider := HSeparator.new()
 	layout.add_child(divider)
@@ -145,7 +143,7 @@ func _build_menu() -> void:
 	picks.add_theme_constant_override("separation", 24)
 	layout.add_child(picks)
 	var first := _character_picker("PLAYER ONE", ORANGE)
-	var second := _character_picker("PLAYER TWO", TEAL)
+	var second := _character_picker("OPPONENT", TEAL)
 	picks.add_child(first)
 	picks.add_child(second)
 	_p1_select = first.get_meta("selector") as OptionButton
@@ -168,7 +166,7 @@ func _build_menu() -> void:
 	_ai.add_theme_color_override("font_disabled_color", MUTED)
 	_ai.add_theme_font_size_override("font_size", 18)
 	layout.add_child(_ai)
-	var rules := _label("HUG catches an opening. DEFLECT stops a hug. FEINT baits a deflect.\nJump over a reach. Hug at matching height.\nHug, deflect and feint work in the air. Signatures start on the ground.", 17, MUTED)
+	var rules := _label("Deflect briefly stops an incoming hug. Feint imitates a hug.\nHug when you are within reach and at a similar height.\nHug, deflect and feint work in the air. Signatures start on the ground.", 17, MUTED)
 	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	layout.add_child(rules)
 	var controls := _label("P1   A/D move    W/SPACE jump    F hug    G deflect    H feint    J signature\nP2   ←/→ move    ↑ jump    K hug    L deflect    ; feint    ' signature", 17)
@@ -176,7 +174,7 @@ func _build_menu() -> void:
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 12)
 	layout.add_child(actions)
-	var start := _button("STEP INTO THE STREET", TEAL)
+	var start := _button("PLAY", TEAL)
 	start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	start.add_theme_font_size_override("font_size", 18)
 	actions.add_child(start)
@@ -187,7 +185,7 @@ func _build_menu() -> void:
 		_ai.release_focus()
 		start_requested.emit(_p1_select.selected, _p2_select.selected, _ai.button_pressed)
 	)
-	var practice := _button("PRACTICE • stationary partner", ORANGE)
+	var practice := _button("PRACTICE (stationary partner)", ORANGE)
 	practice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	practice.add_theme_font_size_override("font_size", 18)
 	actions.add_child(practice)
@@ -198,9 +196,6 @@ func _build_menu() -> void:
 		_ai.release_focus()
 		training_requested.emit(_p1_select.selected, _p2_select.selected)
 	)
-	var note := _label("Land a hug. Read the reply. Run it back.", 14, MUTED)
-	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	layout.add_child(note)
 
 
 func _character_picker(caption: String, accent: Color) -> VBoxContainer:
@@ -296,14 +291,11 @@ func _build_result() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 14)
 	_result.add_child(column)
-	var caption := _label("A WELL-FOUGHT EMBRACE", 16, TEAL)
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(caption)
 	_result_text = _label("", 30)
 	_result_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_result_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_result_text)
-	var rematch := _button("ONE MORE ROUND", TEAL)
+	var rematch := _button("REMATCH", TEAL)
 	column.add_child(rematch)
 	rematch.pressed.connect(func() -> void:
 		rematch.release_focus()
@@ -322,7 +314,7 @@ func _build_pause() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
 	_pause.add_child(column)
-	var title := _label("TAKE A BREATHER", 30)
+	var title := _label("PAUSED", 30)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(title)
 	var instruction := _label("Press ESC to return to the match.", 18, MUTED)

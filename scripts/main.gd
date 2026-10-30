@@ -69,8 +69,8 @@ func start_match(p1, p2, use_ai):
 	remaining = 60.0
 	paused = false
 	reset_timer = 0.0
-	status = "FIRST TO FIVE • MAKE YOUR MOVE"
-	status_time = 2.0
+	status = ""
+	status_time = 0.0
 	effects.clear()
 	for i in range(2):
 		fighters[i].character = p1 if i == 0 else p2
@@ -92,7 +92,7 @@ func start_practice(p1, p2):
 	start_match(p1, p2, false)
 	practice = true
 	ui.set_practice(true)
-	set_status("PRACTICE • STATIONARY PARTNER • ESC FOR MENU", 9999.0)
+	# Mode and controls are already identified in the HUD.
 
 func reset_positions():
 	for i in range(2):
@@ -255,7 +255,7 @@ func _physics_process(delta):
 		remaining = maxf(0.0, remaining - delta)
 	status_time = maxf(0.0, status_time - delta)
 	if status_time <= 0.0:
-		status = "READ • BAIT • EMBRACE"
+		status = ""
 	if versus_ai:
 		update_ai(delta)
 	for i in range(2):
@@ -315,13 +315,24 @@ func _physics_process(delta):
 	update_visuals()
 
 func can_reach(index):
+	return hug_miss_reason(index).is_empty()
+
+func hug_miss_reason(index):
 	var f = fighters[index]
 	var other = fighters[1 - index]
 	var reach = 125.0 if f.action == "hug" else special_data(f.character).reach
 	var dx = other.x - f.x
 	# Baxter turns his back visually while moving toward the committed target.
 	var aim = f.action_facing
-	return absf(dx) <= reach and (dx * aim >= -35.0) and absf(f.height - other.height) <= VERTICAL_HUG_REACH
+	if absf(dx) > reach:
+		return "Out of reach"
+	if dx * aim < -35.0:
+		return "Facing away"
+	if f.height - other.height > VERTICAL_HUG_REACH:
+		return "Too high"
+	if other.height - f.height > VERTICAL_HUG_REACH:
+		return "Too low"
+	return ""
 
 func is_deflecting(index):
 	var f = fighters[index]
@@ -331,24 +342,24 @@ func resolve_attempts(attempts):
 	var landed = []
 	for index in attempts:
 		if not can_reach(index):
-			set_status("WHIFF! CHECK RANGE AND HEIGHT", 0.8)
+			set_status(hug_miss_reason(index), 0.8)
 			continue
 		if is_deflecting(1 - index):
 			var defender = fighters[1 - index]
 			defender.action = "idle"
 			defender.time = 0.0
 			fighters[index].time = maxf(fighters[index].time, fighters[index].duration - 0.42)
-			set_status("DEFLECT! YOUR OPENING", 0.9)
+			set_status("Deflected", 0.9)
 			add_effect((fighters[0].x + fighters[1].x) / 2.0, Color("6fd4ce"), (fighters[0].height + fighters[1].height) * 0.5)
 		else:
 			landed.append(index)
 	if landed.size() == 2:
-		set_status("MUTUAL! TOO WHOLESOME TO CALL", 1.3)
+		set_status("Mutual hug (no point)", 1.3)
 		begin_embrace()
 	elif landed.size() == 1:
 		var winner = landed[0]
 		fighters[winner].score += 1
-		set_status(NAMES[fighters[winner].character].to_upper() + " • HUG LANDED!", 1.3)
+		set_status(NAMES[fighters[winner].character] + " scores", 1.3)
 		begin_embrace()
 
 func begin_embrace():
@@ -378,8 +389,8 @@ func finish_match():
 	running = false
 	var a = fighters[0].score
 	var b = fighters[1].score
-	var message = "A PERFECTLY FRIENDLY DRAW" if a == b else NAMES[fighters[0 if a > b else 1].character].to_upper() + " WINS!"
-	ui.update_hud(a, b, remaining, "GOOD GAME • GREAT HUGS")
+	var message = "Draw" if a == b else NAMES[fighters[0 if a > b else 1].character] + " wins"
+	ui.update_hud(a, b, remaining, "")
 	ui.show_result(message)
 
 func update_ai(delta):
