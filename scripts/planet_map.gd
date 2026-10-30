@@ -5,6 +5,7 @@ extends Control
 ## Public centers use local Control coordinates, including responsive letterboxing.
 
 const Roster = preload("res://scripts/roster_data.gd")
+const Flags = preload("res://scripts/country_flag.gd")
 const DESIGN_SIZE := Vector2(680, 260)
 const P1 := Color("f19858")
 const P2 := Color("61d4c7")
@@ -144,6 +145,9 @@ func _draw() -> void:
 	if show_countries:
 		for index in range(CENTERS.size()):
 			var selected := index == p1_index or index == p2_index
+			if not selected:
+				var flag_origin := _point(CENTERS[index] + Vector2(-12, -24))
+				Flags.draw_flag(self, Rect2(flag_origin, Vector2(25, 15) * scale_factor), index, true)
 			var baseline := CENTERS[index] + Vector2(0, 14 if selected else 4)
 			_text(Roster.COUNTRIES[index], baseline, 12, Color("142b36"))
 	if p1_index == p2_index:
@@ -164,6 +168,8 @@ func _marker(at: Vector2, value: String, color: Color, active: bool) -> void:
 	panel.set_corner_radius_all(maxi(2, int(4 * scale_factor)))
 	draw_style_box(panel, Rect2(center - Vector2(15, 10) * scale_factor, Vector2(30, 20) * scale_factor))
 	_text(value, at + Vector2(0, 4), 11, color.lightened(0.12))
+	var country_index := p1_index if value == "P1" else p2_index
+	Flags.draw_flag(self, Rect2(center + Vector2(-13, -33) * scale_factor, Vector2(26, 16) * scale_factor), country_index, true)
 
 
 func _text(value: String, baseline: Vector2, font_size: int, color: Color) -> void:

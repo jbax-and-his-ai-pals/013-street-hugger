@@ -10,7 +10,7 @@ The setup uses familiar fighting-game navigation with original artwork, fictiona
 4. Practice is a secondary option on the single-player character screen. It retains the stationary-partner rules.
 5. Pause/results can return to character select. A main-menu route allows changing modes.
 
-The portrait art is rendered from the same procedural character drawings used during matches. Country highlights and character cards use matching orange P1 and teal P2 colors. Mirror choices remain legal and both map markers must stay visible.
+The portrait art is rendered from the same procedural character drawings used during matches. Each country has a deliberately wonky original flag, reused beside country names in roster cards and previews and on flagpoles on the map. Country highlights and character cards use matching orange P1 and teal P2 colors. Mirror choices remain legal and both map markers must stay visible. Flags are drawn procedurally, with no image-generation requests.
 
 ## Pelara roster
 

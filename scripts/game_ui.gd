@@ -35,6 +35,7 @@ var _planet_map: Control
 var _previews: Array = []
 var _preview_names: Array[Label] = []
 var _preview_countries: Array[Label] = []
+var _preview_flags: Array[Control] = []
 var _preview_descriptions: Array[Label] = []
 var _player_tabs: Array[Button] = []
 var _cards: Array[Button] = []
@@ -199,6 +200,14 @@ func _make_portrait(parent: Control, rect: Rect2, index: int, look_direction: fl
 	portrait.call("set_character", index)
 	return portrait
 
+func _make_flag(parent: Control, rect: Rect2, index: int) -> Control:
+	var flag = load("res://scripts/country_flag.gd").new()
+	parent.add_child(flag)
+	flag.position = rect.position
+	flag.size = rect.size
+	flag.country_index = index
+	return flag
+
 
 func _build_character_select() -> void:
 	_selection = Control.new()
@@ -236,6 +245,7 @@ func _build_character_select() -> void:
 		var country := _place_label(content, "", 16, Rect2(0, 198, 208, 22), MUTED)
 		country.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_preview_countries.append(country)
+		_preview_flags.append(_make_flag(content, Rect2(44, 198, 36, 22), selected[player]))
 		var detail_x := 46.0 if player == 0 else 1028.0
 		var detail := _place_label(_selection, "", 17, Rect2(detail_x, 348, 206, 130), CREAM)
 		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -263,8 +273,10 @@ func _build_character_select() -> void:
 		_make_portrait(card, Rect2(12, 4, 154, 73), index, 1.0, false)
 		var character_name := _place_label(card, NAMES[index], 17, Rect2(6, 76, 166, 22))
 		character_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var home := _place_label(card, Roster.COUNTRIES[index], 13, Rect2(6, 98, 166, 17), MUTED)
-		home.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var country_width := ThemeDB.fallback_font.get_string_size(Roster.COUNTRIES[index], HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+		var country_start := (178.0 - country_width - 28.0) * 0.5
+		_make_flag(card, Rect2(country_start, 101, 22, 13), index)
+		_place_label(card, Roster.COUNTRIES[index], 13, Rect2(country_start + 28, 98, country_width + 2, 17), MUTED)
 		var first_mark := _place_label(card, "P1", 13, Rect2(8, 4, 78, 20), ORANGE)
 		var second_mark := _place_label(card, "CPU", 13, Rect2(88, 4, 82, 20), TEAL)
 		second_mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -392,6 +404,13 @@ func _refresh_selection() -> void:
 		_previews[player].call("set_character", index)
 		_preview_names[player].text = NAMES[index]
 		_preview_countries[player].text = Roster.COUNTRIES[index]
+		var country_width := ThemeDB.fallback_font.get_string_size(Roster.COUNTRIES[index], HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var country_start := (208.0 - country_width - 44.0) * 0.5
+		_preview_flags[player].set("country_index", index)
+		_preview_flags[player].position = Vector2(country_start, 198)
+		_preview_countries[player].position = Vector2(country_start + 44, 198)
+		_preview_countries[player].size = Vector2(country_width + 2, 22)
+		_preview_countries[player].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_preview_descriptions[player].text = DESCRIPTIONS[index]
 		var player_caption := "P1" if player == 0 else opponent
 		_player_tabs[player].text = player_caption + (" / LOCKED" if locked[player] else " / SELECTING" if player == active_player else " / EDIT")
