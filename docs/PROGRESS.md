@@ -2,6 +2,12 @@
 
 Project name: `013-street-hugger`. No project license added. All character and stage art is drawn procedurally in Godot; no image-generation requests used.
 
+## Latest setup milestone
+
+The first menu now contains Single Player and Multiplayer. Character selection uses two rows of four original portraits, larger character previews, and a country map of fictional Pelara. Single Player selects a CPU opponent and offers Practice; Multiplayer accepts independent local selectors. Both choices must be confirmed before starting. Pause/results can return to Character Select or Main Menu. Shared roster data links each fighter, portrait, and country. Mirror selections show both map markers.
+
+Validation: the 167 gameplay checks remain passing; 42 setup checks cover flow, keyboard selectors, button callbacks, mode preservation, confirmation/back behavior, practice, mirror matches, and country tracking. Main menu, unconfirmed/confirmed selection, and mirror selection were rendered and inspected. Character description overlap found during inspection was corrected. The next user check is the two-minute setup flow at the top of PLAYTEST.md.
+
 ## Existing playable baseline
 
 - Eight selectable original prototype appearances and signature approaches.

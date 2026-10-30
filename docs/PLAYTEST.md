@@ -1,6 +1,10 @@
 # Street Hugger playtests
 
-## Next gate: jumping — about 5 minutes
+## Current gate: setup — about 2 minutes
+
+Restart the game. Choose Single Player, select a portrait with the mouse or A/D/W/S, and check that the larger portrait, name, country, and highlighted region agree. Press F to confirm, choose the CPU opponent, confirm again, then Enter to start. From pause, return to Character Select and revise a choice. Back out to the main menu and try Multiplayer, including both players choosing the same character; P2 uses arrows/K. Finally try Practice from Single Player and confirm only P1 responds to gameplay keys. Report a stuck selector, unexpected navigation, mismatched country/portrait, or accidental match start. See [setup notes](SETUP_FLOW.md) for the roster's fictional countries.
+
+## Jumping — about 5 minutes
 
 **When:** after the jump-enabled build is ready. This is the next focused feedback gate; the longer baseline sequence below remains useful for broader regression testing. Allow about five minutes including changing modes and recording a few observations.
 

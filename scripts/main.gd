@@ -3,7 +3,8 @@ extends Node2D
 const Visual = preload("res://scripts/fighter_visual.gd")
 const Stage = preload("res://scripts/stage.gd")
 const Interface = preload("res://scripts/game_ui.gd")
-const NAMES = ["Champ", "Long Arms", "Backwards Baxter", "Acrobat", "Big Softy", "Speedster", "Showboat", "Boomerang"]
+const Roster = preload("res://scripts/roster_data.gd")
+const NAMES = Roster.NAMES
 const SPECIALS = ["POWER STEP", "LONG DISTANCE", "REVERSE HUG", "HEAD OVER HEELS", "BEAR NECESSITIES", "QUICK SQUEEZE", "GRAND ENTRANCE", "RETURN TO SENDER"]
 const FLOOR_Y = 555.0
 const ACTION_KEYS = [[KEY_F, KEY_G, KEY_H, KEY_J], [KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE]]
@@ -53,6 +54,7 @@ func _ready():
 	ui.start_requested.connect(start_match)
 	ui.rematch_requested.connect(func(): start_match(last_picks[0], last_picks[1], versus_ai))
 	ui.menu_requested.connect(back_to_menu)
+	ui.return_to_selection_requested.connect(return_to_selection)
 	ui.resume_requested.connect(func(): paused = false; ui.set_paused(false))
 	ui.training_requested.connect(start_practice)
 	ui.show_menu()
@@ -79,6 +81,8 @@ func start_match(p1, p2, use_ai):
 	running = true
 	ui.set_paused(false)
 	ui.show_match(NAMES[p1], NAMES[p2], versus_ai)
+	ui.selected = [p1, p2]
+	ui.selected_mode = "single" if use_ai else "multi"
 	update_visuals()
 
 func back_to_menu():
@@ -88,9 +92,17 @@ func back_to_menu():
 	ui.set_paused(false)
 	ui.show_menu()
 
+func return_to_selection():
+	held_keys.clear()
+	running = false
+	paused = false
+	ui.set_paused(false)
+	ui.show_character_select()
+
 func start_practice(p1, p2):
 	start_match(p1, p2, false)
 	practice = true
+	ui.selected_mode = "single"
 	ui.set_practice(true)
 	# Mode and controls are already identified in the HUD.
 

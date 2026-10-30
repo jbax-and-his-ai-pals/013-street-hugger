@@ -2,7 +2,7 @@
 
 A Godot 4.7 prototype of competitive hugging: serious fighting stances, careful spacing, dramatic fake-outs, and embraces instead of strikes.
 
-Milestone 1 is a rough eight-character mechanically varied demo. The next milestone adds jumping, aerial hugs, and passing over opponents. It is intended to answer whether the controls, timing, and hug interactions are readable and enjoyable. It is not a finished or competitively balanced game.
+The playable prototype includes eight mechanically varied characters, jumping, aerial hugs, and an arcade setup flow with portraits and a fictional world map. It is intended to test whether the controls, interactions, and selection flow are readable and enjoyable. It is not a finished or competitively balanced game.
 
 ## Run
 
@@ -16,7 +16,9 @@ Alternatively, run this in PowerShell:
 & 'C:\Users\baxte\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64.exe' --path 'C:\jbax-and-his-ai-pals\013-street-hugger'
 ```
 
-Choose two characters and either a computer opponent or local two-player play. Practice provides a stationary partner and an unlimited timer for isolated experiments. Standard matches are first to five points, with a 60-second match timer.
+Choose **Single Player** for a computer opponent or **Multiplayer** for two local players. The next screen has eight portraits in two rows of four. Select and confirm both characters, then choose **Start Match** (or press Enter). Their home countries are highlighted on the fictional planet Pelara. Practice is available on the single-player character screen and provides a stationary partner with an unlimited timer. Standard matches are first to five points, with a 60-second match timer.
+
+In character selection, P1 uses **A/D/W/S** and **F** to confirm; P2 uses **arrows** and **K** in Multiplayer. In Single Player, P1 chooses both their fighter and the CPU opponent. **G/Esc** backs out; **Tab** switches the active mouse/keyboard selector. You can also click portraits, confirmation buttons, and the P1/opponent tabs. Pause/results offer Character Select and Main Menu routes.
 
 ## Controls
 
@@ -40,7 +42,7 @@ Characters can pass over each other when their heights differ by more than 85 pi
 
 ## What to test now
 
-Start with [the focused jump playtest](docs/PLAYTEST.md#next-gate-jumping--about-5-minutes), about five minutes including mode changes and feedback. The same document retains the approximately 15-minute full baseline sequence. Please prioritize input response, height/range clarity, deflect timing, and animation contact over cosmetic polish or fine balance.
+Start with [the setup-flow test](docs/SETUP_FLOW.md#focused-user-test): navigate portraits, check the map, confirm/start, back out, and try both modes. The [playtest document](docs/PLAYTEST.md) also retains jump and combat checks.
 
 The eight prototype characters are Champ, Long Arms, Backwards Baxter, Acrobat, Big Softy, Speedster, Showboat, and Boomerang. Their approaches differ mechanically. They currently share upright contact choreography; Acrobat's inversion is in the approach rather than a completed upside-down embrace. See [character notes](docs/CHARACTERS.md).
 
@@ -73,3 +75,5 @@ From the project directory, run the gameplay regression script with the console 
 These checks cover gameplay rules; they cannot establish whether the animation or input response feels good to a player.
 
 The current suite passes **167 checks**, including all 64 ordered character contact pairings, eight seeded computer matches, input ownership, jump profiles/buffering/landing, and aerial hugging/deflection. All eight jump silhouettes and an aerial embrace have been inspected in rendered captures. More detail is in [the progress notes](docs/PROGRESS.md). These checks establish basic functionality, not competitive balance.
+
+Setup has a separate **42-check** suite: `--headless --path . --script res://tests/test_setup.gd`. It covers both modes, confirmation/back navigation, independent selectors, portrait button callbacks, practice, mirror matches, and country tracking.

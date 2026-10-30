@@ -6,23 +6,22 @@ signal training_requested(p1: int, p2: int)
 signal rematch_requested
 signal menu_requested
 signal resume_requested
+signal return_to_selection_requested
 
 const INK := Color("172d3b")
 const CREAM := Color("fff4dc")
 const MUTED := Color("5a6b70")
 const ORANGE := Color("ed7951")
 const TEAL := Color("217f7b")
-const NAMES := ["Champ", "Long Arms", "Backwards Baxter", "Acrobat", "Big Softy", "Speedster", "Showboat", "Boomerang"]
-const DESCRIPTIONS := [
-	"Steps forward before hugging.",
-	"Long reach. Stays in place during the attempt.",
-	"Turns away and moves backward toward the opponent.",
-	"Vaults forward, then hugs on landing.",
-	"Slow startup with a wider reach.",
-	"Fast forward slide with short reach.",
-	"Press Feint during the early flourish to cancel.",
-	"Moves forward, then hugs after returning."
-]
+const Roster = preload("res://scripts/roster_data.gd")
+const NAMES = Roster.NAMES
+const DESCRIPTIONS = Roster.DESCRIPTIONS
+
+var screen: String = "main"
+var selected_mode: String = "single"
+var selected: Array = [0, 1]
+var locked: Array = [false, false]
+var active_player: int = 0
 
 var _built := false
 var _root: Control
@@ -31,11 +30,24 @@ var _menu: PanelContainer
 var _hud: Control
 var _result: PanelContainer
 var _pause: PanelContainer
-var _p1_select: OptionButton
-var _p2_select: OptionButton
-var _ai: CheckButton
-var _p1_detail: Label
-var _p2_detail: Label
+var _selection: Control
+var _planet_map: Control
+var _previews: Array = []
+var _preview_names: Array[Label] = []
+var _preview_countries: Array[Label] = []
+var _preview_descriptions: Array[Label] = []
+var _player_tabs: Array[Button] = []
+var _cards: Array[Button] = []
+var _card_p1: Array[Label] = []
+var _card_p2: Array[Label] = []
+var _main_buttons: Array[Button] = []
+var _main_choice := 0
+var _selection_context: Label
+var _selection_mode: Label
+var _selection_keys: Label
+var _confirm_button: Button
+var _start_button: Button
+var _practice_button: Button
 var _p1_name: Label
 var _p2_name: Label
 var _p1_score: Label
@@ -80,6 +92,7 @@ func _label(text: String, size: int, color: Color = INK) -> Label:
 func _button(text: String, color: Color = ORANGE) -> Button:
 	var button := Button.new()
 	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size.y = 48
 	button.add_theme_font_size_override("font_size", 20)
 	button.add_theme_color_override("font_color", CREAM)
@@ -117,111 +130,368 @@ func _build() -> void:
 	_shade.color = Color(0.045, 0.10, 0.14, 0.56)
 	_shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	_build_menu()
+	_build_character_select()
 	_build_hud()
 	_build_result()
 	_build_pause()
 
 
 func _build_menu() -> void:
-	_menu = _panel(_root, Rect2(150, 34, 980, 652))
+	_menu = _panel(_root, Rect2(360, 134, 560, 452))
 	var margin := MarginContainer.new()
 	_menu.add_child(margin)
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_top", 5)
-	margin.add_theme_constant_override("margin_bottom", 5)
-	var layout := VBoxContainer.new()
-	margin.add_child(layout)
-	layout.add_theme_constant_override("separation", 8)
-	var title := _label("STREET HUGGER", 48)
-	layout.add_child(title)
-	var subtitle := _label("First to five hugs wins.", 20, MUTED)
-	layout.add_child(subtitle)
-	var divider := HSeparator.new()
-	layout.add_child(divider)
-	var picks := HBoxContainer.new()
-	picks.add_theme_constant_override("separation", 24)
-	layout.add_child(picks)
-	var first := _character_picker("PLAYER ONE", ORANGE)
-	var second := _character_picker("OPPONENT", TEAL)
-	picks.add_child(first)
-	picks.add_child(second)
-	_p1_select = first.get_meta("selector") as OptionButton
-	_p2_select = second.get_meta("selector") as OptionButton
-	_p1_detail = first.get_meta("detail") as Label
-	_p2_detail = second.get_meta("detail") as Label
-	_p2_select.select(1)
-	_p1_detail.text = DESCRIPTIONS[0]
-	_p2_detail.text = DESCRIPTIONS[1]
-	_p1_select.item_selected.connect(func(index: int) -> void: _p1_detail.text = DESCRIPTIONS[index])
-	_p2_select.item_selected.connect(func(index: int) -> void: _p2_detail.text = DESCRIPTIONS[index])
-	_ai = CheckButton.new()
-	_ai.text = "Computer opponent   /   switch off for local two-player"
-	_ai.button_pressed = true
-	_ai.add_theme_color_override("font_color", INK)
-	_ai.add_theme_color_override("font_pressed_color", INK)
-	_ai.add_theme_color_override("font_hover_color", INK)
-	_ai.add_theme_color_override("font_hover_pressed_color", INK)
-	_ai.add_theme_color_override("font_focus_color", INK)
-	_ai.add_theme_color_override("font_disabled_color", MUTED)
-	_ai.add_theme_font_size_override("font_size", 18)
-	layout.add_child(_ai)
-	var rules := _label("Deflect briefly stops an incoming hug. Feint imitates a hug.\nHug when you are within reach and at a similar height.\nHug, deflect and feint work in the air. Signatures start on the ground.", 17, MUTED)
-	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	layout.add_child(rules)
-	var controls := _label("P1   A/D move    W/SPACE jump    F hug    G deflect    H feint    J signature\nP2   ←/→ move    ↑ jump    K hug    L deflect    ; feint    ' signature", 17)
-	layout.add_child(controls)
-	var actions := HBoxContainer.new()
-	actions.add_theme_constant_override("separation", 12)
-	layout.add_child(actions)
-	var start := _button("PLAY", TEAL)
-	start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	start.add_theme_font_size_override("font_size", 18)
-	actions.add_child(start)
-	start.pressed.connect(func() -> void:
-		start.release_focus()
-		_p1_select.release_focus()
-		_p2_select.release_focus()
-		_ai.release_focus()
-		start_requested.emit(_p1_select.selected, _p2_select.selected, _ai.button_pressed)
-	)
-	var practice := _button("PRACTICE (stationary partner)", ORANGE)
-	practice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	practice.add_theme_font_size_override("font_size", 18)
-	actions.add_child(practice)
-	practice.pressed.connect(func() -> void:
-		practice.release_focus()
-		_p1_select.release_focus()
-		_p2_select.release_focus()
-		_ai.release_focus()
-		training_requested.emit(_p1_select.selected, _p2_select.selected)
-	)
+	for side in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 22)
+	var column := VBoxContainer.new()
+	margin.add_child(column)
+	column.add_theme_constant_override("separation", 20)
+	var title := _label("STREET HUGGER", 43)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(title)
+	var rule := _label("First to five hugs.", 20, MUTED)
+	rule.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(rule)
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 12
+	column.add_child(spacer)
+	for index in range(2):
+		var button := _button("Single Player" if index == 0 else "Multiplayer", TEAL)
+		button.custom_minimum_size.y = 64
+		column.add_child(button)
+		_main_buttons.append(button)
+		button.pressed.connect(choose_mode.bind("single" if index == 0 else "multi"))
+		button.mouse_entered.connect(_set_main_choice.bind(index))
+	var keys := _label("↑ / ↓ choose    Enter select", 15, MUTED)
+	keys.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(keys)
+	_refresh_main_buttons()
 
 
-func _character_picker(caption: String, accent: Color) -> VBoxContainer:
-	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.add_theme_constant_override("separation", 8)
-	box.add_child(_label(caption, 16, accent))
-	var selector := OptionButton.new()
-	selector.custom_minimum_size = Vector2(420, 44)
-	selector.add_theme_font_size_override("font_size", 22)
-	selector.add_theme_color_override("font_color", INK)
-	selector.add_theme_color_override("font_hover_color", INK)
-	selector.add_theme_stylebox_override("normal", _style(Color("f3e6cb")))
-	selector.add_theme_stylebox_override("hover", _style(Color("f9edd5"), accent))
-	selector.add_theme_stylebox_override("pressed", _style(Color("eadbbd"), accent))
-	for character_name in NAMES:
-		selector.add_item(character_name)
-	box.add_child(selector)
-	var detail := _label("", 17, MUTED)
-	detail.custom_minimum_size = Vector2(0, 64)
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(detail)
-	box.set_meta("selector", selector)
-	box.set_meta("detail", detail)
-	return box
+func _set_main_choice(index: int) -> void:
+	_main_choice = index
+	_refresh_main_buttons()
 
+
+func _refresh_main_buttons() -> void:
+	for index in range(_main_buttons.size()):
+		var color := TEAL if index == _main_choice else INK
+		_main_buttons[index].add_theme_stylebox_override("normal", _style(color))
+		_main_buttons[index].add_theme_stylebox_override("hover", _style(color.lightened(0.1)))
+
+
+func _place_label(parent: Node, text: String, font_size: int, rect: Rect2, color: Color = INK) -> Label:
+	var label := _label(text, font_size, color)
+	parent.add_child(label)
+	label.position = rect.position
+	label.size = rect.size
+	return label
+
+
+func _make_portrait(parent: Control, rect: Rect2, index: int, look_direction: float, animate: bool) -> Control:
+	var portrait_script = load("res://scripts/fighter_portrait.gd")
+	var portrait: Control = portrait_script.new()
+	parent.add_child(portrait)
+	portrait.position = rect.position
+	portrait.size = rect.size
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.set("facing", look_direction)
+	portrait.set("animated", animate)
+	portrait.call("set_character", index)
+	return portrait
+
+
+func _build_character_select() -> void:
+	_selection = Control.new()
+	_root.add_child(_selection)
+	_selection.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_selection.mouse_filter = Control.MOUSE_FILTER_STOP
+	var backdrop := ColorRect.new()
+	_selection.add_child(backdrop)
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color("102733")
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place_label(_selection, "CHARACTER SELECT", 27, Rect2(42, 19, 440, 40), CREAM)
+	_selection_mode = _place_label(_selection, "", 17, Rect2(860, 25, 378, 30), Color("a9ccc4"))
+	_selection_mode.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	for player in range(2):
+		var x := 42.0 if player == 0 else 994.0
+		var preview_panel := _panel(_selection, Rect2(x, 78, 244, 244), CREAM)
+		preview_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var content := Control.new()
+		preview_panel.add_child(content)
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var tab := _button("P1" if player == 0 else "OPPONENT", ORANGE if player == 0 else TEAL)
+		_selection.add_child(tab)
+		tab.position = Vector2(x, 75)
+		tab.size = Vector2(244, 39)
+		tab.custom_minimum_size.y = 39
+		tab.add_theme_font_size_override("font_size", 16)
+		tab.pressed.connect(_edit_player.bind(player))
+		_player_tabs.append(tab)
+		var portrait := _make_portrait(content, Rect2(4, 30, 204, 143), selected[player], 1.0 if player == 0 else -1.0, true)
+		_previews.append(portrait)
+		var name_label := _place_label(content, "", 21, Rect2(0, 169, 208, 28))
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_preview_names.append(name_label)
+		var country := _place_label(content, "", 16, Rect2(0, 198, 208, 22), MUTED)
+		country.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_preview_countries.append(country)
+		var detail_x := 46.0 if player == 0 else 1028.0
+		var detail := _place_label(_selection, "", 17, Rect2(detail_x, 348, 206, 130), CREAM)
+		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_preview_descriptions.append(detail)
+	var map_script = load("res://scripts/planet_map.gd")
+	_planet_map = map_script.new()
+	_selection.add_child(_planet_map)
+	_planet_map.position = Vector2(306, 76)
+	_planet_map.size = Vector2(668, 241)
+	_planet_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place_label(_selection, Roster.PLANET, 14, Rect2(322, 83, 120, 22), Color("a9ccc4"))
+	_selection_context = _place_label(_selection, "", 18, Rect2(304, 312, 672, 30), CREAM)
+	_selection_context.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for index in range(8):
+		var card := Button.new()
+		_selection.add_child(card)
+		card.position = Vector2(266 + (index % 4) * 190, 350 + (index / 4) * 128)
+		card.size = Vector2(178, 118)
+		card.focus_mode = Control.FOCUS_NONE
+		card.clip_contents = true
+		card.pressed.connect(_click_character.bind(index))
+		card.add_theme_stylebox_override("normal", _style(CREAM))
+		card.add_theme_stylebox_override("hover", _style(Color("fffaf0"), TEAL))
+		card.add_theme_stylebox_override("pressed", _style(Color("ecdfc3"), ORANGE))
+		_make_portrait(card, Rect2(12, 4, 154, 73), index, 1.0, false)
+		var character_name := _place_label(card, NAMES[index], 17, Rect2(6, 76, 166, 22))
+		character_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var home := _place_label(card, Roster.COUNTRIES[index], 13, Rect2(6, 98, 166, 17), MUTED)
+		home.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var first_mark := _place_label(card, "P1", 13, Rect2(8, 4, 78, 20), ORANGE)
+		var second_mark := _place_label(card, "CPU", 13, Rect2(88, 4, 82, 20), TEAL)
+		second_mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_card_p1.append(first_mark)
+		_card_p2.append(second_mark)
+		_cards.append(card)
+	_selection_keys = _place_label(_selection, "", 14, Rect2(266, 611, 750, 36), Color("c0d4cf"))
+	_selection_keys.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var back := _button("BACK", INK)
+	_selection.add_child(back)
+	back.position = Vector2(42, 654)
+	back.size = Vector2(144, 42)
+	back.custom_minimum_size.y = 42
+	back.pressed.connect(back_setup)
+	_practice_button = _button("PRACTICE (stationary partner)", INK)
+	_selection.add_child(_practice_button)
+	_practice_button.position = Vector2(200, 654)
+	_practice_button.size = Vector2(332, 42)
+	_practice_button.custom_minimum_size.y = 42
+	_practice_button.add_theme_font_size_override("font_size", 16)
+	_practice_button.pressed.connect(_launch_practice)
+	_confirm_button = _button("CONFIRM P1", ORANGE)
+	_selection.add_child(_confirm_button)
+	_confirm_button.position = Vector2(798, 654)
+	_confirm_button.size = Vector2(216, 42)
+	_confirm_button.custom_minimum_size.y = 42
+	_confirm_button.add_theme_font_size_override("font_size", 17)
+	_confirm_button.pressed.connect(_confirm_active)
+	_start_button = _button("START MATCH", TEAL)
+	_selection.add_child(_start_button)
+	_start_button.position = Vector2(1030, 654)
+	_start_button.size = Vector2(208, 42)
+	_start_button.custom_minimum_size.y = 42
+	_start_button.add_theme_font_size_override("font_size", 18)
+	_start_button.pressed.connect(launch_selection)
+	_selection.hide()
+
+
+func choose_mode(mode: String) -> void:
+	selected_mode = "multi" if mode == "multi" else "single"
+	show_character_select()
+
+
+func show_character_select() -> void:
+	_build()
+	screen = "select"
+	locked = [false, false]
+	active_player = 0
+	_menu.hide()
+	_selection.show()
+	_shade.hide()
+	_hud.hide()
+	_result.hide()
+	_pause.hide()
+	_refresh_selection()
+
+
+func choose_character(player: int, index: int) -> void:
+	if player < 0 or player > 1 or screen != "select" or locked[player]:
+		return
+	selected[player] = clampi(index, 0, 7)
+	active_player = player
+	_refresh_selection()
+
+
+func confirm_player(player: int) -> void:
+	if player < 0 or player > 1 or screen != "select":
+		return
+	locked[player] = true
+	active_player = 1 - player if not locked[1 - player] else player
+	_refresh_selection()
+
+
+func _confirm_active() -> void:
+	confirm_player(active_player)
+
+
+func _edit_player(player: int) -> void:
+	active_player = player
+	locked[player] = false
+	_refresh_selection()
+
+
+func _click_character(index: int) -> void:
+	locked[active_player] = false
+	choose_character(active_player, index)
+
+
+func back_setup() -> void:
+	if screen != "select":
+		show_menu()
+		return
+	if locked[active_player]:
+		locked[active_player] = false
+	elif locked[1 - active_player]:
+		active_player = 1 - active_player
+		locked[active_player] = false
+	else:
+		show_menu()
+		return
+	_refresh_selection()
+
+
+func launch_selection() -> void:
+	if screen != "select" or not (locked[0] and locked[1]):
+		return
+	screen = "match"
+	get_viewport().gui_release_focus()
+	start_requested.emit(selected[0], selected[1], selected_mode == "single")
+
+
+func _launch_practice() -> void:
+	if screen != "select" or selected_mode != "single":
+		return
+	screen = "match"
+	get_viewport().gui_release_focus()
+	training_requested.emit(selected[0], selected[1])
+
+
+func _refresh_selection() -> void:
+	var opponent := "CPU" if selected_mode == "single" else "P2"
+	_selection_mode.text = "Single Player" if selected_mode == "single" else "Multiplayer / local"
+	for player in range(2):
+		var index: int = selected[player]
+		_previews[player].call("set_character", index)
+		_preview_names[player].text = NAMES[index]
+		_preview_countries[player].text = Roster.COUNTRIES[index]
+		_preview_descriptions[player].text = DESCRIPTIONS[index]
+		var player_caption := "P1" if player == 0 else opponent
+		_player_tabs[player].text = player_caption + (" / LOCKED" if locked[player] else " / SELECTING" if player == active_player else " / EDIT")
+		var tab_color := ORANGE if player == 0 else TEAL
+		_player_tabs[player].add_theme_stylebox_override("normal", _style(tab_color if player == active_player else tab_color.darkened(0.3)))
+	for index in range(8):
+		var is_first: bool = selected[0] == index
+		var is_second: bool = selected[1] == index
+		_card_p1[index].visible = is_first
+		_card_p2[index].visible = is_second
+		_card_p1[index].text = "P1 ✓" if locked[0] else "P1"
+		_card_p2[index].text = opponent + (" ✓" if locked[1] else "")
+		var edge := ORANGE if is_first else TEAL if is_second else Color("63808a")
+		var style := _style(CREAM, edge, 10)
+		style.set_border_width_all(4 if is_first or is_second else 1)
+		_cards[index].add_theme_stylebox_override("normal", style)
+		var hover_style := style.duplicate() as StyleBoxFlat
+		hover_style.bg_color = CREAM.lightened(0.04)
+		_cards[index].add_theme_stylebox_override("hover", hover_style)
+		var pressed_style := style.duplicate() as StyleBoxFlat
+		pressed_style.bg_color = CREAM.darkened(0.06)
+		_cards[index].add_theme_stylebox_override("pressed", pressed_style)
+	_planet_map.set("opponent_label", opponent)
+	_planet_map.call("set_selections", selected[0], selected[1], active_player)
+	var ready: bool = locked[0] and locked[1]
+	_selection_context.text = "Both players ready" if ready else "Select P1" if active_player == 0 else "Select opponent" if selected_mode == "single" else "Select P2"
+	_start_button.visible = ready
+	_confirm_button.visible = not ready
+	_confirm_button.text = "CONFIRM P1" if active_player == 0 else "CONFIRM CPU" if selected_mode == "single" else "CONFIRM P2"
+	_practice_button.visible = selected_mode == "single"
+	_selection_keys.text = "A/D/W/S choose    F confirm    G back    Tab switch player\nEnter starts when both characters are confirmed" if selected_mode == "single" else "P1  A/D/W/S choose · F confirm · G back     P2  arrows choose · K confirm · L back\nEnter starts when both characters are confirmed"
+
+
+func _move_selector(player: int, horizontal: int, vertical: int) -> void:
+	if locked[player]:
+		return
+	var index: int = selected[player]
+	var column := (index % 4 + horizontal + 4) % 4
+	var row := (index / 4 + vertical + 2) % 2
+	choose_character(player, row * 4 + column)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if screen != "main" and screen != "select":
+		return
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	var key: int = event.physical_keycode if event.physical_keycode != 0 else event.keycode
+	var handled := true
+	if screen == "main":
+		match key:
+			KEY_UP, KEY_W:
+				_set_main_choice((_main_choice + 1) % 2)
+			KEY_DOWN, KEY_S:
+				_set_main_choice((_main_choice + 1) % 2)
+			KEY_ENTER, KEY_KP_ENTER, KEY_F:
+				choose_mode("single" if _main_choice == 0 else "multi")
+			_:
+				handled = false
+	else:
+		var p1 := active_player if selected_mode == "single" else 0
+		match key:
+			KEY_A: _move_selector(p1, -1, 0)
+			KEY_D: _move_selector(p1, 1, 0)
+			KEY_W: _move_selector(p1, 0, -1)
+			KEY_S: _move_selector(p1, 0, 1)
+			KEY_F: confirm_player(p1)
+			KEY_G:
+				active_player = p1
+				back_setup()
+			KEY_LEFT:
+				if selected_mode == "multi": _move_selector(1, -1, 0)
+				else: _move_selector(active_player, -1, 0)
+			KEY_RIGHT:
+				if selected_mode == "multi": _move_selector(1, 1, 0)
+				else: _move_selector(active_player, 1, 0)
+			KEY_UP:
+				if selected_mode == "multi": _move_selector(1, 0, -1)
+				else: _move_selector(active_player, 0, -1)
+			KEY_DOWN:
+				if selected_mode == "multi": _move_selector(1, 0, 1)
+				else: _move_selector(active_player, 0, 1)
+			KEY_K:
+				if selected_mode == "multi": confirm_player(1)
+				else: confirm_player(active_player)
+			KEY_L:
+				if selected_mode == "multi":
+					active_player = 1
+					back_setup()
+				else:
+					back_setup()
+			KEY_TAB: _edit_player(1 - active_player)
+			KEY_ESCAPE: back_setup()
+			KEY_ENTER, KEY_KP_ENTER:
+				if locked[0] and locked[1]: launch_selection()
+				else: confirm_player(active_player)
+			_:
+				handled = false
+	if handled:
+		get_viewport().set_input_as_handled()
 
 func _build_hud() -> void:
 	_hud = Control.new()
@@ -287,7 +557,7 @@ func _build_hud() -> void:
 
 
 func _build_result() -> void:
-	_result = _panel(_root, Rect2(390, 238, 500, 244))
+	_result = _panel(_root, Rect2(390, 214, 500, 292))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 14)
 	_result.add_child(column)
@@ -305,12 +575,15 @@ func _build_result() -> void:
 	column.add_child(back)
 	back.pressed.connect(func() -> void:
 		back.release_focus()
-		menu_requested.emit()
+		return_to_selection_requested.emit()
 	)
+	var main_menu := _button("MAIN MENU", INK)
+	column.add_child(main_menu)
+	main_menu.pressed.connect(func() -> void: menu_requested.emit())
 
 
 func _build_pause() -> void:
-	_pause = _panel(_root, Rect2(430, 220, 420, 280))
+	_pause = _panel(_root, Rect2(430, 195, 420, 330))
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
 	_pause.add_child(column)
@@ -330,14 +603,19 @@ func _build_pause() -> void:
 	column.add_child(back)
 	back.pressed.connect(func() -> void:
 		back.release_focus()
-		menu_requested.emit()
+		return_to_selection_requested.emit()
 	)
+	var main_menu := _button("MAIN MENU", INK)
+	column.add_child(main_menu)
+	main_menu.pressed.connect(func() -> void: menu_requested.emit())
 
 
 func show_menu() -> void:
 	_build()
+	screen = "main"
 	_shade.show()
 	_menu.show()
+	_selection.hide()
 	_hud.hide()
 	_result.hide()
 	_pause.hide()
@@ -345,8 +623,10 @@ func show_menu() -> void:
 
 func show_match(p1_name: String, p2_name: String, versus_ai: bool) -> void:
 	_build()
+	screen = "match"
 	set_practice(false)
 	_menu.hide()
+	_selection.hide()
 	_shade.hide()
 	_hud.show()
 	_result.hide()
@@ -380,6 +660,7 @@ func set_practice(value: bool) -> void:
 
 func show_result(message: String) -> void:
 	_build()
+	screen = "result"
 	_pause.hide()
 	_shade.show()
 	_result.show()
@@ -399,5 +680,9 @@ func _signature_label(label: Label, cooldown: float) -> void:
 
 func set_paused(value: bool) -> void:
 	_build()
+	if value:
+		screen = "paused"
+	elif screen == "paused":
+		screen = "match"
 	_pause.visible = value
 	_shade.visible = value or _menu.visible or _result.visible
